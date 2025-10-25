@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sync Status Monitor</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+            animation: fadeInDown 0.6s ease-out;
+        }
+
+        .header h1 {
+            font-size: 2rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 0.95rem;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            animation: fadeIn 0.8s ease-out;
+        }
+
+        .region-selector {
+            display: flex;
+            background: white;
+            border-radius: 12px;
+            padding: 4px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            flex: 1;
+            min-width: 250px;
+        }
+
+        .region-btn {
+            flex: 1;
+            padding: 12px 20px;
+            border: none;
+            background: transparent;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+        }
+
+        .region-btn:hover {
+            background: #f0f0f0;
+        }
+
+        .region-btn.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.4);
+        }
+
+        .sync-type-selector {
+            display: flex;
+            background: white;
+            border-radius: 12px;
+            padding: 4px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            min-width: 200px;
+        }
+
+        .sync-type-btn {
+            flex: 1;
+            padding: 12px 20px;
+            border: none;
+            background: transparent;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+        }
+
+        .sync-type-btn:hover {
+            background: #f0f0f0;
+        }
+
+        .sync-type-btn.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.4);
+        }
+
+        .refresh-btn {
+            padding: 12px 24px;
+            background: white;
+            border: none;
+            border-radius: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .refresh-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+        }
+
+        .refresh-btn:active {
+            transform: translateY(0);
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: white;
+            font-size: 1.1rem;
+        }
+
+        .spinner {
+            border: 3px solid rgba(255,255,255,0.3);
+            border-top: 3px solid white;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .sync-cards {
+            display: grid;
+            gap: 20px;
+            animation: fadeInUp 0.6s ease-out;
+        }
+
+        .sync-card {
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            animation: slideIn 0.5s ease-out;
+        }
+
+        .sync-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 24px rgba(0,0,0,0.15);
+        }
+
+        .sync-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .sync-id {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #333;
+        }
+
+        .status-badge {
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .status-algolia_sent {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+        }
+
+        .status-export_inprogress {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            color: white;
+        }
+
+        .status-error {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            color: white;
+        }
+
+        .sync-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+
+        .detail-item {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .detail-label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            color: #6b7280;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+
+        .detail-value {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #1f2937;
+        }
+
+        .time-info {
+            background: #f9fafb;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            color: #4b5563;
+            margin-top: 12px;
+        }
+
+        .time-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 4px;
+        }
+
+        .time-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .time-label {
+            font-weight: 600;
+        }
+
+        .error-message {
+            background: #fee2e2;
+            color: #991b1b;
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .last-updated {
+            text-align: center;
+            color: white;
+            margin-top: 20px;
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 1.5rem;
+            }
+
+            .sync-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .region-selector {
+                min-width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔄 Sync Status Monitor</h1>
+            <p>Kibo-Algolia Integration Status Dashboard</p>
+        </div>
+
+        <div class="controls">
+            <div class="region-selector">
+                <button class="region-btn active" data-region="MY" data-delta="75" data-full="74">🇲🇾 Malaysia</button>
+                <button class="region-btn" data-region="HK" data-delta="66" data-full="65">🇭🇰 Hong Kong</button>
+                <button class="region-btn" data-region="SG" data-delta="23" data-full="21">🇸🇬 Singapore</button>
+            </div>
+            <div class="sync-type-selector">
+                <button class="sync-type-btn active" data-type="delta">Delta Feed</button>
+                <button class="sync-type-btn" data-type="full">Full Ad-hoc</button>
+            </div>
+            <button class="refresh-btn" onclick="fetchSyncStatus()">
+                <span>🔄</span>
+                <span>Refresh</span>
+            </button>
+        </div>
+
+        <div id="content"></div>
+
+        <div class="last-updated" id="lastUpdated"></div>
+    </div>
+
+    <script>
+        let currentRegion = 'MY';
+        let currentSyncType = 'delta';
+        let configMap = {
+            MY: { delta: 75, full: 74 },
+            HK: { delta: 66, full: 65 },
+            SG: { delta: 23, full: 21 }
+        };
+
+        // Region selector
+        document.querySelectorAll('.region-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.region-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                currentRegion = this.dataset.region;
+                fetchSyncStatus();
+            });
+        });
+
+        // Sync type selector
+        document.querySelectorAll('.sync-type-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.sync-type-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                currentSyncType = this.dataset.type;
+                fetchSyncStatus();
+            });
+        });
+
+        function formatDateTime(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: true
+            });
+        }
+
+        function getStatusClass(status) {
+            return `status-${status.toLowerCase().replace(/_/g, '_')}`;
+        }
+
+        function renderSyncCards(data) {
+            const content = document.getElementById('content');
+            
+            if (!data || !data.collection || data.collection.length === 0) {
+                content.innerHTML = '<div class="error-message">No sync history found</div>';
+                return;
+            }
+
+            // Get last 3 records
+            const records = data.collection.slice(0, 3);
+            
+            let html = '<div class="sync-cards">';
+            
+            records.forEach((record, index) => {
+                const statusClass = getStatusClass(record.status);
+                const statusDisplay = record.status.replace(/_/g, ' ');
+                
+                html += `
+                    <div class="sync-card" style="animation-delay: ${index * 0.1}s">
+                        <div class="sync-header">
+                            <div class="sync-id">Sync #${record.id}</div>
+                            <div class="status-badge ${statusClass}">${statusDisplay}</div>
+                        </div>
+                        
+                        <div class="sync-details">
+                            <div class="detail-item">
+                                <div class="detail-label">Kibo Count</div>
+                                <div class="detail-value">${record.kibo_count.toLocaleString()}</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label">Algolia Count</div>
+                                <div class="detail-value">${record.algolia_count.toLocaleString()}</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label">Error Count</div>
+                                <div class="detail-value" style="color: ${record.error_count > 0 ? '#ef4444' : '#10b981'}">${record.error_count}</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label">Type</div>
+                                <div class="detail-value">${record.type}</div>
+                            </div>
+                        </div>
+
+                        <div class="time-info">
+                            <div class="time-row">
+                                <span class="time-label">Created:</span>
+                                <span>${formatDateTime(record.created_date_time)}</span>
+                            </div>
+                            <div class="time-row">
+                                <span class="time-label">Updated:</span>
+                                <span>${formatDateTime(record.updated_date_time)}</span>
+                            </div>
+                            <div class="time-row">
+                                <span class="time-label">Picked:</span>
+                                <span>${formatDateTime(record.picked_date_time)}</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            html += '</div>';
+            content.innerHTML = html;
+        }
+
+        async function fetchSyncStatus() {
+            const content = document.getElementById('content');
+            content.innerHTML = `
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <div>Loading sync status...</div>
+                </div>
+            `;
+
+            const mapConfigId = configMap[currentRegion][currentSyncType];
+            const url = `https://kong-d68a054838mesgsza.kongcloud.dev/syncHistory/list?mapConfigId=${mapConfigId}`;
+
+            try {
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'accept': '*/*'
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                renderSyncCards(data);
+
+                const now = new Date().toLocaleString('en-US', {
+                    month: 'short',
+                    day: 'numeric',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit',
+                    hour12: true
+                });
+                document.getElementById('lastUpdated').textContent = `Last updated: ${now}`;
+
+            } catch (error) {
+                content.innerHTML = `
+                    <div class="error-message">
+                        <strong>Error loading data</strong><br>
+                        ${error.message}<br><br>
+                        <small>If you see a CORS error, please enable CORS plugin in Kong Konnect.</small><br>
+                        <small>Check the setup guide for instructions.</small>
+                    </div>
+                `;
+            }
+        }
+
+        // Auto-refresh every 2 minutes
+        setInterval(fetchSyncStatus, 120000);
+
+        // Initial load
+        fetchSyncStatus();
+    </script>
+</body>
+</html>
